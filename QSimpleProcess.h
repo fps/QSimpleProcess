@@ -8,7 +8,7 @@
 
 #include <iostream>
 /**
- * A simple wrapper around a QObject that tries to
+ * A simple wrapper around a QProcess that tries to
  * reliably encapsulate an often needed usecase:
  * 
  * Using a process similar to a function call:
