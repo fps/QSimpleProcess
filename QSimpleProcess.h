@@ -58,6 +58,9 @@ class QSimpleProcess : public QObject {
 			connect(process, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(process_finished(int, QProcess::ExitStatus)));
 			connect(process, SIGNAL(error(QProcess::ProcessError)), this, SLOT(process_error(QProcess::ProcessError)));
 			
+			timer->setSingleShot(true);
+			connect(timer, SIGNAL(timout()), this, SLOT(process_timeout()));
+			
 			process->start(program, arguments);
 		}
 	
@@ -90,6 +93,11 @@ class QSimpleProcess : public QObject {
 			process->closeWriteChannel();
 		}
 		
+		void process_timeout() {
+			process->close();
+			emit error(QProcess::Timedout);
+		}
+
 	signals:
 		/**
 		 * If the error signal was emitted, then the
