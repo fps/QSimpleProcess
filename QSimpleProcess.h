@@ -59,7 +59,7 @@ class QSimpleProcess : public QObject {
 			connect(process, SIGNAL(error(QProcess::ProcessError)), this, SLOT(process_error(QProcess::ProcessError)));
 			
 			timer->setSingleShot(true);
-			timer->start(timemout);
+			timer->start(timeout);
 			connect(timer, SIGNAL(timeout()), this, SLOT(process_timeout()));
 			
 			process->start(program, arguments);
