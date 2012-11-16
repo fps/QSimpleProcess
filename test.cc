@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
-	QSimpleProcessTest process("echo", QStringList(), "hello world", -1);
+	QSimpleProcessTest process("cat", QStringList(), "hello world", -1);
 
 	return app.exec();
 }
