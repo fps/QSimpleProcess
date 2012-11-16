@@ -9,13 +9,7 @@
 
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
-	
-	if (argc < 2) {
-		std::cout << "Usage: test_qsimpleprocess cmd arg1 arg2 ..." << std::endl;
-		return EXIT_FAILURE;
-	}
-	
-	QSimpleProcessTest process;
-	
+	QSimpleProcessTest process("echo", QStringList(), "hello world", -1);
+
 	return app.exec();
 }

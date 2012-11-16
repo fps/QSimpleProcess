@@ -16,12 +16,12 @@ class QSimpleProcessTest : public QObject {
 	QSimpleProcess process;
 
 	public:
-		QSimpleProcessTest() {
+		QSimpleProcessTest(QString command, QStringList arguments, QByteArray stdin, unsigned long timeout) {
 			connect(&process, SIGNAL(error (QProcess::ProcessError)), this, SLOT(error(QProcess::ProcessError)));
 			connect(&process, SIGNAL(finished(int, QByteArray, QByteArray)), this, SLOT(finished(int, QByteArray, QByteArray)));
 			
 			std::cout << "starting" << std::endl;
-			process.start("echo", QStringList() << "bla" << "bla", "Bla Bla Bla", -1);
+			process.start(command, arguments, stdin, timeout);
 		}
 	
 	public slots:
