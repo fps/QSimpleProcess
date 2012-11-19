@@ -83,7 +83,7 @@ class QSimpleProcess : public QObject {
 		}
 
 		void process_ready_read_stderr() {
-			stdout.append(process->readAllStandardError());
+			stderr.append(process->readAllStandardError());
 		}
 
 		void process_started() {
