@@ -70,10 +70,18 @@ class QSimpleProcess : public QObject {
 		
 		process->start(program, arguments, stdin, timeout);
 		
-		while (process->state == IDLE || process->state == RUNNING || process->state == STARTING) {
+		std::cout << "processing" << std::endl;
+		
+		while ((process->state == IDLE) || (process->state == STARTING) || (process->state == RUNNING)) {
+			// std::cout << "." << std::flush;
 			usleep(10000);
-			QCoreApplication::processEvents();
+			
+			// std::cout << "," << std::flush;
+			QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+			// std::cout << ":" << std::flush;
 		}
+		
+		// std::cout << "process not idle starting or running" << std::endl;
 		
 		if (process->state == TIMEOUT_ERROR) {
 			throw std::runtime_error("Process timed out");
@@ -86,6 +94,10 @@ class QSimpleProcess : public QObject {
 		/**
 		 * Only FINISHED left
 		 */
+		if (process->state != FINISHED) {
+			throw std::logic_error("Application error - state not consistent");
+		}
+		
 		stdout = process->stdout;
 		stderr = process->stderr;
 		
@@ -119,13 +131,14 @@ class QSimpleProcess : public QObject {
 			
 			process->start(program, arguments);
 			state = STARTING;
+			// std::cout << "start() end" << std::endl;
 		}
 	
 	private slots:
 		void process_error(QProcess::ProcessError process_error) {
 			state = PROCESS_ERROR;
 			// std::cout << "error" << std::endl;
-			process->close();
+			// process->close();
 			emit error(process_error);
 		}
 		
@@ -156,8 +169,9 @@ class QSimpleProcess : public QObject {
 		}
 		
 		void process_timeout() {
+			//std::cout << "timeout" << std::endl;
 			state = TIMEOUT_ERROR;
-			process->close();
+			// process->close();
 			emit error(QProcess::Timedout);
 		}
 
