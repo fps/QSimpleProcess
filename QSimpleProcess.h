@@ -5,8 +5,12 @@
 #include <QtCore/QObject>
 #include <QtCore/QTimer>
 #include <QtCore/QByteArray>
+#include <QtCore/QCoreApplication>
 
+#include <unistd.h>
 #include <iostream>
+#include <stdexcept>
+
 /**
  * A simple wrapper around a QProcess that tries to
  * reliably encapsulate an often needed usecase:
@@ -28,14 +32,65 @@ class QSimpleProcess : public QObject {
 	QByteArray stderr;
 	QByteArray stdin;
 
+	enum { IDLE, STARTING, RUNNING, FINISHED, PROCESS_ERROR, TIMEOUT_ERROR } state;
+	
 	public:
 		QSimpleProcess(QObject *parent = 0) :
 			QObject(parent),
 			process(new QProcess(this)),
-			timer(new QTimer(this))
+			timer(new QTimer(this)),
+			state(IDLE)
 		{
 			
 		}
+		
+	
+	/**
+	 * This static function tries to act somewhat like
+	 * python's subprocess.check_output(). It constructs
+	 * a QSimpleProcess instance, periodically calls 
+	 * QApplication::processEvents() so that other event 
+	 * processing can happen.
+	 * 
+	 * The stdout and stderr streams will hold the 
+	 * output of the subprocess after run() returns.
+	 * 
+	 * This function will throw a runtime_error in
+	 * case something went wrong.
+	 */
+	static void run(
+		const QString program, 
+		const QStringList arguments, 
+		const QByteArray &stdin, 
+		QByteArray &stdout, 
+		QByteArray &stderr, 
+		unsigned long timeout) {
+		
+		QSimpleProcess *process = new QSimpleProcess;
+		
+		process->start(program, arguments, stdin, timeout);
+		
+		while (process->state == IDLE || process->state == RUNNING || process->state == STARTING) {
+			usleep(10000);
+			QCoreApplication::processEvents();
+		}
+		
+		if (process->state == TIMEOUT_ERROR) {
+			throw std::runtime_error("Process timed out");
+		}
+		
+		if (process->state == PROCESS_ERROR) {
+			throw std::runtime_error("Processerror");
+		}
+		
+		/**
+		 * Only FINISHED left
+		 */
+		stdout = process->stdout;
+		stderr = process->stderr;
+		
+		delete process;
+	}
 	
 	public slots:
 		/**
@@ -63,16 +118,20 @@ class QSimpleProcess : public QObject {
 			connect(timer, SIGNAL(timeout()), this, SLOT(process_timeout()));
 			
 			process->start(program, arguments);
+			state = STARTING;
 		}
 	
 	private slots:
 		void process_error(QProcess::ProcessError process_error) {
+			state = PROCESS_ERROR;
 			// std::cout << "error" << std::endl;
 			process->close();
 			emit error(process_error);
 		}
 		
 		void process_finished(int exitCode, QProcess::ExitStatus exitStatus) {
+			state = FINISHED;
+			
 			stdout.append(process->readAllStandardOutput());
 			stderr.append(process->readAllStandardError());
 			emit finished(exitCode, stdout, stderr);
@@ -87,6 +146,8 @@ class QSimpleProcess : public QObject {
 		}
 
 		void process_started() {
+			state = RUNNING;
+			
 			while(0 != stdin.length()) {
 				stdin = stdin.mid(process->write(stdin));
 			}
@@ -95,6 +156,7 @@ class QSimpleProcess : public QObject {
 		}
 		
 		void process_timeout() {
+			state = TIMEOUT_ERROR;
 			process->close();
 			emit error(QProcess::Timedout);
 		}
