@@ -57,6 +57,9 @@ class QSimpleProcess : public QObject {
 	 * 
 	 * This function will throw a runtime_error in
 	 * case something went wrong.
+	 * 
+	 * The parameters timeout and event_processing_period
+	 * are in milliseconds.
 	 */
 	static void run(
 		const QString program, 
@@ -64,21 +67,20 @@ class QSimpleProcess : public QObject {
 		const QByteArray &stdin, 
 		QByteArray &stdout, 
 		QByteArray &stderr, 
-		unsigned long timeout) {
+		unsigned long timeout,
+		unsigned long event_processing_period = 10
+	) {
 		
 		QSimpleProcess *process = new QSimpleProcess;
 		
 		process->start(program, arguments, stdin, timeout);
 		
-		std::cout << "processing" << std::endl;
+		// std::cout << "processing" << std::endl;
 		
 		while ((process->state == IDLE) || (process->state == STARTING) || (process->state == RUNNING)) {
-			// std::cout << "." << std::flush;
 			usleep(10000);
 			
-			// std::cout << "," << std::flush;
-			QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-			// std::cout << ":" << std::flush;
+			QCoreApplication::processEvents(QEventLoop::AllEvents, 1000 * event_processing_period);
 		}
 		
 		// std::cout << "process not idle starting or running" << std::endl;
@@ -115,6 +117,9 @@ class QSimpleProcess : public QObject {
 			QByteArray stdin,
 			unsigned long timeout
 		) {
+			if (state != IDLE) {
+				throw std::runtime_error("Not in IDLE state - Did you start the process again before it finished?");
+			}
 			stdout = "";
 			stderr = "";
 			this->stdin = stdin;
@@ -131,14 +136,11 @@ class QSimpleProcess : public QObject {
 			
 			process->start(program, arguments);
 			state = STARTING;
-			// std::cout << "start() end" << std::endl;
 		}
 	
 	private slots:
 		void process_error(QProcess::ProcessError process_error) {
 			state = PROCESS_ERROR;
-			// std::cout << "error" << std::endl;
-			// process->close();
 			emit error(process_error);
 		}
 		
@@ -169,9 +171,7 @@ class QSimpleProcess : public QObject {
 		}
 		
 		void process_timeout() {
-			//std::cout << "timeout" << std::endl;
 			state = TIMEOUT_ERROR;
-			// process->close();
 			emit error(QProcess::Timedout);
 		}
 
